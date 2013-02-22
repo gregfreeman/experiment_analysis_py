@@ -1,6 +1,5 @@
 import  sys
 import json
-from pprint import pprint
 import urllib
 import urlparse
 import numpy as np
@@ -11,12 +10,12 @@ def load_json(folder,file):
     data=[]
     if parts.scheme and parts.netloc:      
         filename=folder+'/'+file
-        data_file=urllib.urlopen(filename).read()
-        data=json.loads(data_file)
+        data_file=urllib.urlopen(filename)
+        data=json.load(data_file)
     else:
         filename=os.path.join(folder,file)
-        data_file=open(filename).read()
-        data=json.loads(data_file)
+        data_file=open(filename)
+        data=json.load(data_file)
     return data
 
 
@@ -33,14 +32,17 @@ class Experiment:
             self.load(folder)
 
     def load(self, folder):
-#        print folder
         results =load_json(folder,'results.json')
-        self.paramset =load_json(folder,'paramset.json')
-#        self.info =load_json(folder,'info.json')
+        paramset =load_json(folder,'paramset.json')
+        if type(paramset)!=list: # single parameters are serialized as a dictionary
+            paramset=[paramset]
+        self.paramset=paramset
+        try:
+            self.info =load_json(folder,'info.json')
+        except:
+            self.info =[]
         dim=[]
         for param in self.paramset:
- #           print param['values']
- #           print len(param['values'])
             dim.append(len(param['values']))
         dim2=dim[::-1]
         ndim=len(dim)
@@ -63,13 +65,11 @@ class Experiment:
                     test=[test]
                 idx=[idx for idx, val in enumerate(values) if (val in test) ]
                 idxs.append(idx)
- #               print len(param['values'])
                 k=np.repeat(np.s_[:],ndim)
                 k[i]=idx
                 d=d[tuple(k)]
             else:
                 idxs.append(range(len(param['values'])))
- #       print idxs
         return d
 
 
@@ -84,7 +84,6 @@ class Experiment:
         ndim=d.ndim     
         for i,x in enumerate(self.paramset):
             if(x['field'] in means):
-                #print 'mean:'+str(i)+x['field']
                 # take sum across dimension
                 y=y.mean(i)
                 # return singleton dimension
